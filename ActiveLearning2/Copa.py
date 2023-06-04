@@ -49,6 +49,9 @@ Model_list = [
 for model_name in Model_list :
     # model_name = "kykim/electra-kor-base"
     print(model_name)
+
+    #klue/bert-base
+    # model_name = 'klue/bert-base'
     task = "COPA"
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -63,7 +66,7 @@ for model_name in Model_list :
     parser.add_argument("--sep_token", default=tokenizer.sep_token, type=str)
     args, _ = parser.parse_known_args()
 
-    wandb.init(project="DL_COPA", name=f"{task}-{model_name}-{random_seed}", entity="deeplearningcopa")
+    wandb.init(project="DL_COPA", name=f"{task}-{model_name}-{random_seed}")
 
     train_data = pd.read_csv("./COPA/SKT_COPA_Train.tsv", delimiter="\t")
     train_text, train_question, train_1, train_2, train_labels = (
@@ -101,7 +104,7 @@ for model_name in Model_list :
     ]
     eval_loader = DataLoader(
         dataset,
-        batch_size=args.batch_size,
+        batch_size=8,
         num_workers=8,
         drop_last=True,
         pin_memory=True,
@@ -166,7 +169,7 @@ for model_name in Model_list :
                     attention_mask=attention_mask,
                     labels=eval_label
                 )
-
+            
                 eval_classification_results = eval_out.logits.argmax(-1)
                 eval_loss = eval_out.loss
 
@@ -182,6 +185,7 @@ for model_name in Model_list :
             print({"eval_loss": eval_loss})
             print({"eval_acc": eval_acc / len(eval_data)})
             print({"epoch": epoch + 1})
+
 
             # 모델 저장하기 편하도록 torch.save 디렉토리 변경
             if not os.path.exists(f"model_save/{model_name.replace('/', '-')}"):
