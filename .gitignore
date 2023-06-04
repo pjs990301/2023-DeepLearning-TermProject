@@ -6,3 +6,5 @@
 /ActiveLearning1/runs/
 /ActiveLearning1/PennFudanPed.zip
 .DS_Store
+/COPA/
+*.tsv/
