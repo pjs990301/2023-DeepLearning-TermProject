@@ -24,37 +24,14 @@ np.random.seed(random_seed)
 random.seed(random_seed)
 ##################################
 
-Model_list = [
-    "lassl/bert-ko-small",
-    "lassl/roberta-ko-small",
-    "tunib/electra-ko-small",
-    "tunib/electra-ko-en-small",
-    "monologg/koelectra-small-v3-discriminator",
-    "beomi/KcELECTRA-base-v2022",
-    "jason9693/soongsil-bert-small",
-    "monologg/kocharelectra-small-discriminator",
-    "monologg/kocharelectra-base-discriminator",
-    "beomi/kcbert-base",
-    "beomi/KcELECTRA-base",
-    "tunib/electra-ko-base",
-    "tunib/electra-ko-en-base",
-    "kykim/bert-kor-base",
-    "kykim/funnel-kor-base",
-    "kykim/electra-kor-base",
-    "lassl/bert-ko-base",
-    "monologg/kobigbird-bert-base",
-    "hyunwoongko/brainsbert-base",
-    "jinmang2/kpfbert",
-    "beomi/kcbert-large",
-    "klue/roberta-large",
-]
 
-for model_name in Model_list :
-    # model_name = "kykim/electra-kor-base"
+if __name__ == "__main__" :
+    
+    # klue/bert-base
+    # model_name = 'klue/bert-base'
+    model_name = "kykim/electra-kor-base"
     print(model_name)
 
-    #klue/bert-base
-    # model_name = 'klue/bert-base'
     task = "COPA"
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -71,6 +48,8 @@ for model_name in Model_list :
 
     wandb.init(project="DL_COPA", name=f"{task}-{model_name}-{random_seed}")
 
+    w_config = wandb.config
+
     train_data = pd.read_csv("./COPA/SKT_COPA_Train.tsv", delimiter="\t")
     train_text, train_question, train_1, train_2, train_labels = (
         train_data["sentence"].values,
@@ -86,7 +65,7 @@ for model_name in Model_list :
     ]
     train_loader = DataLoader(
         dataset,
-        batch_size=8,
+        batch_size=w_config['train_batch_size'],
         num_workers=8,
         drop_last=True,
         pin_memory=True,
@@ -107,16 +86,15 @@ for model_name in Model_list :
     ]
     eval_loader = DataLoader(
         dataset,
-        batch_size=8,
+        batch_size=w_config["test_batch_size"],
         num_workers=8,
         drop_last=True,
         pin_memory=True,
     )
 
-    optimizer = AdamW(params=model.parameters(), lr=1e-5, weight_decay=3e-7)
+    optimizer = AdamW(params=model.parameters(), lr=w_config["lr"], weight_decay=w_config["weight_decay"])
 
-
-    for epoch in range(args.epoch):
+    for epoch in range(w_config["epoch"]):
         model.train()
         train_acc = 0
         for train in tqdm(train_loader):
@@ -189,11 +167,12 @@ for model_name in Model_list :
             print({"eval_acc": eval_acc / len(eval_data)})
             print({"epoch": epoch + 1})
 
+            model_out = f"model_save/{model_name.replace('/', '-')}/{w_config['train_batch_size']}-{w_config['test_batch_size']}-{w_config['lr']}-{w_config['weight_decay']}"
 
             # 모델 저장하기 편하도록 torch.save 디렉토리 변경
-            if not os.path.exists(f"model_save/{model_name.replace('/', '-')}"):
-                os.makedirs(f"model_save/{model_name.replace('/', '-')}")
+            if not os.path.exists(model_out):
+                os.makedirs(model_out)
 
-            torch.save(model.state_dict(),f"model_save/{model_name.replace('/', '-')}/{model_name.replace('/', '-')}-{task}-{epoch}.pt")
+            torch.save(model.state_dict(),f"{model_out}/{model_name.replace('/', '-')}-{task}-{epoch}-{eval_acc / len(eval_data)}.pt")
 
-    wandb.finish()
+
