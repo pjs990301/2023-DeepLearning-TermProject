@@ -10,8 +10,8 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from torch.optim import AdamW
 import wandb
 
-import sys
-print(sys.executable)
+# import sys
+# print(sys.executable)
 
 #############################################    -> 실험결과 FIX
 random_seed = 4
