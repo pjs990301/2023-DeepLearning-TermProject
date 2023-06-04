@@ -40,7 +40,6 @@ Model_list = [
     "kykim/electra-kor-base",
     "lassl/bert-ko-base",
     "monologg/kobigbird-bert-base",
-    "monologg/kocharelectra-base-discriminator",
     "hyunwoongko/brainsbert-base",
     "jinmang2/kpfbert",
     "beomi/kcbert-large",
@@ -48,7 +47,7 @@ Model_list = [
 ]
 
 for model_name in Model_list :
-    # model_name = 'beomi/KcELECTRA-base-v2022'
+    # model_name = "kykim/electra-kor-base"
     print(model_name)
     task = "COPA"
     os.environ["TOKENIZERS_PARALLELISM"] = "true"
@@ -108,7 +107,7 @@ for model_name in Model_list :
         pin_memory=True,
     )
 
-    optimizer = AdamW(params=model.parameters(), lr=3e-5, weight_decay=3e-7)
+    optimizer = AdamW(params=model.parameters(), lr=1e-5, weight_decay=3e-7)
 
 
     for epoch in range(args.epoch):
@@ -167,7 +166,7 @@ for model_name in Model_list :
                     attention_mask=attention_mask,
                     labels=eval_label
                 )
-            
+
                 eval_classification_results = eval_out.logits.argmax(-1)
                 eval_loss = eval_out.loss
 
