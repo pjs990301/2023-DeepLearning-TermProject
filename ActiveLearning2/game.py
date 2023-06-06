@@ -33,7 +33,7 @@ model = AutoModelForSequenceClassification.from_pretrained(
     num_labels=2,
 ).cuda()
 
-model.load_state_dict(torch.load('/home/ubuntu/Desktop/deepLearning/ActiveLearning2/model_save/kykim-electra-kor-base-COPA-8.pt'))
+model.load_state_dict(torch.load('kykim-electra-kor-base-COPA-9.pt'))
 
 parser = ArgumentParser()
 parser.add_argument("--epoch", default=10, type=int)

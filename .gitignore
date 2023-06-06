@@ -12,6 +12,7 @@
 /ActiveLearning2/COPA/
 *.tsv/
 *.xml
+*.pt
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
