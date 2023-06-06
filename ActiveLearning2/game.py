@@ -35,13 +35,6 @@ model = AutoModelForSequenceClassification.from_pretrained(
 
 model.load_state_dict(torch.load('kykim-electra-kor-base-COPA-9.pt'))
 
-parser = ArgumentParser()
-parser.add_argument("--epoch", default=10, type=int)
-parser.add_argument("--batch_size", default=256, type=int)
-parser.add_argument("--sep_token", default=tokenizer.sep_token, type=str)
-args, _ = parser.parse_known_args()
-
-
 eval_data = pd.read_csv("./COPA/SKT_COPA_Dev.tsv", delimiter="\t")
 eval_text, eval_question, eval_1, eval_2, eval_labels = (
     eval_data["sentence"].values,
@@ -55,6 +48,7 @@ dataset = [
     {"data": t + args.sep_token + q + args.sep_token + f + args.sep_token + s, "label": l}
     for t, q, f, s, l in zip(eval_text, eval_question, eval_1, eval_2, eval_labels)
 ]
+
 eval_loader = DataLoader(
     dataset,
     batch_size=1,
@@ -65,73 +59,96 @@ eval_loader = DataLoader(
 )
 
 
-with torch.no_grad():
+def load_data():
+
+    random_number = random.randint(1, 500)
+    subset_loder = itertools.islice(eval_loader, random_number, random_number + 1)
+    # subset_loder = itertools.islice(eval_loader, 0, 1)
+
+    for idx, eval in enumerate(subset_loder):
+        eval_text, eval_label = eval["data"], eval["label"].cuda()
+        sentences = eval_text[0].split("[SEP]")
+
+        eval_tokens = tokenizer(
+                    eval_text,
+                    return_tensors="pt",
+                    truncation=True,
+                    padding=True
+                )
+
+    return eval_text, eval_label, sentences, eval_tokens
+
+
+def predict(eval_text, eval_label, sentences, eval_tokens) :
+
+    with torch.no_grad():
         model.eval()
-        # for idx, eval in enumerate(tqdm(subset_loder)):
-        random_number = random.randint(1, 500)
-        subset_loder = itertools.islice(eval_loader, random_number, random_number + 1)
 
-        for idx, eval in enumerate(subset_loder):
-            eval_text, eval_label = eval["data"], eval["label"].cuda()
-            sentences = eval_text[0].split("[SEP]") 
-            
-            eval_tokens = tokenizer(
-                eval_text,
-                return_tensors="pt",
-                truncation=True,
-                padding=True
-            )
+        input_ids = eval_tokens.input_ids.cuda()
+        attention_mask = eval_tokens.attention_mask.cuda()
+        eval_out = model.forward(
+                    input_ids=input_ids,
+                    attention_mask=attention_mask,
+                    labels=eval_label
+                )
 
-            input_ids = eval_tokens.input_ids.cuda()
-            attention_mask = eval_tokens.attention_mask.cuda()
-            eval_out = model.forward(
-                input_ids=input_ids,
-                attention_mask=attention_mask,
-                labels=eval_label
-            )
-        
-            eval_classification_results = eval_out.logits.argmax(-1)
-            time.sleep(5)
+        eval_classification_results = eval_out.logits.argmax(-1)
 
-            st.write(sentences)
-            st.write(eval_classification_results)
-            
-            if sentences[1] == "원인" :
-                st.header("주어진 문장의 원인을 찾으세요!")
-                st.subheader(sentences[0])
+    return eval_classification_results
 
-            elif sentences[1] == "결과" :
-                st.header("주어진 문장의 결과 찾으세요!")
-                st.subheader(sentences[0])
-            
-            seletion = None
-            st.write(seletion)
-            
-            if(seletion is None):
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.header("문장 1")
-                    st.write(sentences[2])
-                    if st.button('0',key=1) :
-                        seletion = 0
-                
-                with col2:
-                    st.header("문장 2")
-                    st.write(sentences[3])
-                    if st.button('1',key=2) :
-                        seletion = 1
-                        
-                st.write(seletion)
-                
-                if eval_classification_results == seletion:
-                    seletion = None
-                    st.success("Correct", icon ="🎉")
-                    st.balloons()
-                    
-                elif eval_classification_results != seletion :
-                    seletion = None
-                    st.error("Not Correct", icon="😥")
-                
+
+eval_text, eval_label, sentences, eval_tokens = load_data()
+
+st.title('2학2석')
+# st.write(sentences)
+# st.write(eval_classification_results)
+
+if sentences[1] == "원인" :
+    st.header("주어진 문장의 원인을 찾으세요!")
+    st.subheader(sentences[0])
+
+elif sentences[1] == "결과" :
+    st.header("주어진 문장의 결과 찾으세요!")
+    st.subheader(sentences[0])
+
+col1, col2 = st.columns(2)
+with col1:
+    st.header("문장 1")
+    st.write(sentences[2])
+
+with col2:
+    st.header("문장 2")
+    st.write(sentences[3])
+
+seletion = st.selectbox("정답을 선택해주세요 ❗",(sentences[2], sentences[3]))
+
+result = None
+seletion_n = None
+
+if seletion == sentences[2] :
+    seletion_n = 0
+else :
+    seletion_n = 1
+
+
+if st.button("선택완료") :
+    # st.write(seletion)
+    result = predict(eval_text, eval_label, sentences, eval_tokens)
+    # st.write(result)
+
+    if seletion_n == result :
+        st.success("Correct", icon ="🎉")
+        st.balloons()
+    else :
+        st.error("Not Correct", icon="😥")
+
+    if seletion_n == 0:
+        # Code for selection 0
+        pass
+    else:
+        # Code for selection 1
+        pass
+
        
 
 
